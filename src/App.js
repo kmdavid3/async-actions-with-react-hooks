@@ -11,14 +11,8 @@ const FETCH_TODO = "FETCH_TODO";
 
 let InitialState = {
   status: IDLE,
-  todos: [
-    {
-      userId: 251,
-      id: 129,
-      title: "nesciunt itaque commodi tempore",
-      completed: true
-    }
-  ]
+  todos: [],
+  error: {}
 };
 
 const todoReducers = (state, action) => {
@@ -44,7 +38,8 @@ const todoReducers = (state, action) => {
     case REJECTED:
       return {
         ...state,
-        status: IDLE
+        status: IDLE,
+        error: action.error
       };
     default:
       return state;
@@ -53,50 +48,34 @@ const todoReducers = (state, action) => {
 
 export default function App() {
   const [state, dispatch] = useReducer(todoReducers, InitialState);
-  const fetchTasks = () => {
+  const launchRequests = () => {
     dispatch({ type: FETCH_TODO });
-    console.log("fetching tasks");
-    setTimeout(() => {
-      dispatch({ type: RESOLVED });
-    });
   };
 
   const fetchTodos = async () => {
     axios
       .get("https://jsonplaceholder.typicode.com/todos")
-      .then(response => {
-        return response;
+      .then(({ data }) => {
+        if (data) {
+          dispatch({ type: ADD_TODO, payload: data });
+          dispatch({ type: RESOLVED });
+        }
       })
       .catch(error => {
-        console.log(error);
-        dispatch({ type: REJECTED });
+        dispatch({ type: REJECTED, error });
       });
-    // console.log("response : ", response.data);
-    // return response;
   };
 
   useEffect(() => {
     if (state.status === PENDING) {
-      try {
-        const response = fetchTodos();
-        if (response.data) {
-          console.log("voila la data");
-        }
-        dispatch({ type: RESOLVED });
-      } catch (error) {
-        console.log("an error occur");
-      }
-      // const payload = fetchTodos();
-      // console.log("payload : ", payload);
-      // dispatch({ type: ADD_TODO, payload });
+      fetchTodos();
     }
-  }, [state.status]);
-  console.log(state);
+  }, [state.status, dispatch]);
   return (
     <div className="App">
       <h1>Hello CodeSandbox</h1>
       <br />
-      <button onClick={fetchTasks}>Fetch tasks</button>
+      <button onClick={launchRequests}>Fetch tasks</button>
       <hr />
       <br />
       <table>
@@ -110,13 +89,14 @@ export default function App() {
           {state.todos.map((item, index) => {
             return (
               <tr key={index}>
-                <td>{item.id}</td>
+                <td>{index}</td>
                 <td>{item.title}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      <br />
     </div>
   );
 }
